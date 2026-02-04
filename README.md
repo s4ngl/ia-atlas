@@ -1,6 +1,6 @@
-# ServiceNow Knowledge Base Analysis Pipeline
+# Indiana University UTIS Information Architecture Generation Pipeline
 
-A multi-phase pipeline that scrapes ServiceNow knowledge base articles, enriches them with semantic metadata using LLMs, builds topic graphs, and analyzes information architecture to identify organizational issues.
+A multi-phase pipeline that scrapes the IU ServiceNow knowledge base articles, enriches them with semantic metadata using LLMs, builds topic graphs, and analyzes information architecture to propose a streamlined organizational structure for UITS' (University Information Technology Service) HPC training website.
 
 ## Features
 
