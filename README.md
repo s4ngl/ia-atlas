@@ -1,22 +1,38 @@
-# ServiceNow Knowledge Base Graph Scraper
+# ServiceNow Knowledge Base Analysis Pipeline
 
-A web scraper that crawls ServiceNow knowledge base articles and builds a graph database of article relationships. This version uses Selenium for dynamic content rendering and supports multiple keywords with configurable depth limits.
+A multi-phase pipeline that scrapes ServiceNow knowledge base articles, enriches them with semantic metadata using LLMs, builds topic graphs, and analyzes information architecture to identify organizational issues.
 
 ## Features
 
-- **Dynamic Content Scraping**: Uses Selenium WebDriver to capture Angular-rendered content
-- **Multi-keyword Search**: Configure multiple keywords with individual depth constraints
-- **Depth-limited Crawling**: Control how deep the crawler follows links from each keyword
-- **Graph Database Storage**: Stores articles and their relationships in PostgreSQL
-- **BFS/DFS Strategies**: Choose between breadth-first or depth-first crawling
-- **Rate Limiting**: Respectful crawling with configurable delays
+- **Phase 0 (Scraping)**: Crawls ServiceNow KB using authenticated HTTP requests, stores articles and links in PostgreSQL
+- **Phase 1 (Enrichment)**: Extracts semantic metadata (topics, keywords, intent, audience) using local LLM (Ollama)
+- **Phase 2 (Topic Graph)**: Builds topic hierarchy and infers relationships between topics
+- **Phase 3 (IA Analysis)**: Generates sidebar structure, detects IA issues, produces review reports
+
+## Architecture
+
+```
+.
+├── app/
+│   ├── main.py              # Phase 0: Legacy scraper (deprecated)
+│   ├── pipeline.py          # All Phases: Main pipeline orchestrator
+│   └── curl.txt             # Authentication credentials for Phase 0
+├── ingestion/scraper/       # Web scraping components
+├── analysis/
+│   ├── enrichment/          # Phase 1: LLM-based article enrichment
+│   ├── topics/              # Phase 2: Topic graph construction
+│   └── ia/                  # Phase 3: Information architecture analysis
+├── persistence/             # Database layers
+├── llm/                     # Ollama client and prompts
+├── config/                  # Configuration
+└── outputs/                 # Generated reports and data files
+```
 
 ## Requirements
 
 - Python 3.9+
 - PostgreSQL database
-- Firefox browser
-- geckodriver (Selenium WebDriver for Firefox)
+- Ollama (for Phases 1-3 LLM inference)
 
 ## Installation
 
@@ -26,41 +42,33 @@ A web scraper that crawls ServiceNow knowledge base articles and builds a graph 
 pip install -r requirements.txt
 ```
 
-### 2. Install Firefox and geckodriver
-
-**On macOS:**
-```bash
-brew install firefox
-brew install geckodriver
-```
-
-**On Ubuntu/Debian:**
-```bash
-sudo apt-get update
-sudo apt-get install firefox
-sudo apt-get install firefox-geckodriver
-```
-
-**On Windows:**
-- Download Firefox from https://www.mozilla.org/firefox/
-- Download geckodriver from https://github.com/mozilla/geckodriver/releases
-- Add geckodriver to your system PATH
-
-### 3. Set Up PostgreSQL Database
-
-Create a database for the scraper:
+### 2. Set Up PostgreSQL Database
 
 ```sql
 CREATE DATABASE kb_graph;
 ```
 
-The scraper will automatically create the necessary tables on first run.
+The pipeline automatically creates all necessary tables on first run.
+
+### 3. Install Ollama (Phases 1-3)
+
+Download from https://ollama.ai and start the service:
+
+```bash
+ollama serve
+```
+
+Pull a model (default: llama3.1:8b):
+
+```bash
+ollama pull llama3.1:8b
+```
 
 ## Configuration
 
-### 1. Edit `config.py`
+### Database Configuration
 
-Update the database configuration:
+Edit `config/config.py`:
 
 ```python
 DatabaseConfig = {
@@ -72,219 +80,496 @@ DatabaseConfig = {
 }
 ```
 
-### 2. Configure Keywords and Depth
+### Phase 0: Scraping Configuration
 
-Add your search keywords with depth limits to `config.py`:
+Configure your ServiceNow instance and search keywords in `config/config.py`:
 
 ```python
+# ServiceNow instance URL
+SERVICENOW_BASE_URL = "https://your-instance.service-now.com"
+
+# Search keywords with max crawl depth
 SEARCH_KEYWORDS = [
-    ("canvas", 2),      # Search "canvas", crawl up to depth 2
-    ("email", 1),       # Search "email", crawl up to depth 1
-    ("vpn", 2),         # Search "vpn", crawl up to depth 2
-    ("duo", 1),         # Search "duo", crawl up to depth 1
+    ("Canvas", 2),      # Search "Canvas", crawl linked articles up to depth 2
+    ("Email", 1),       # Search "Email", crawl linked articles up to depth 1
+    ("VPN", 2),         # Search "VPN", crawl linked articles up to depth 2
 ]
+
+# Crawl strategy: "bfs" (breadth-first) or "dfs" (depth-first)
+CRAWL_STRATEGY = "bfs"
+
+# Maximum articles to crawl per keyword (optional limit)
+MAX_ARTICLES_PER_KEYWORD = None  # None for unlimited
 ```
 
-**Depth Explanation:**
-- **Depth 0**: Only crawl articles from the initial search results
-- **Depth 1**: Crawl search results + articles they link to
-- **Depth 2**: Crawl search results + 1st level links + 2nd level links
-- **Depth N**: Continue following links up to N levels deep
+**Get Authentication Credentials:**
 
-### 3. Get Authentication Credentials
+Phase 0 requires authentication to access ServiceNow. You need to extract cookies and authentication tokens from your browser:
 
-1. Log in to your ServiceNow instance in Firefox
-2. Navigate to the knowledge base search page
-3. Open Firefox Developer Tools (F12)
-4. Go to the Network tab
-5. Perform a search
-6. Find a POST request to the search API
-7. Right-click the request → Copy → Copy as cURL
-8. Paste the entire cURL command into a file named `curl.txt` in the same directory as the scripts
+1. **Log in to ServiceNow** in Firefox or Chrome
+2. **Open Developer Tools** (F12 or right-click → Inspect)
+3. **Go to Network tab**
+4. **Perform a search** in the ServiceNow knowledge base
+5. **Find the search API request** (typically a POST to `/api/now/sp` or similar)
+6. **Right-click the request** → Copy → Copy as cURL
+7. **Save the entire cURL command** to `config/curl.txt`
 
-Example `curl.txt` structure (your actual command will be much longer):
-```
-curl 'https://servicenow.iu.edu/api/now/sp/rectangle/...' \
+Example curl.txt content:
+```bash
+curl 'https://your-instance.service-now.com/api/now/sp' \
   -H 'Cookie: JSESSIONID=...; glide_user_route=...' \
   -H 'X-UserToken: abc123...' \
-  --data-raw '...'
+  --data-raw '{"query":"canvas"}'
+```
+
+The pipeline will automatically extract the necessary authentication from this file.
+
+### Phases 1-3: Analysis Configuration
+
+The pipeline uses reasonable defaults. Optionally customize:
+
+```python
+# Ollama settings (pipeline.py arguments)
+--ollama-url http://localhost:11434
+--ollama-model llama3.1:8b
+
+# Output directory
+--output-dir ./outputs/
 ```
 
 ## Usage
 
-Once configuration is complete, simply run:
+### Phase 0: Scrape Articles
+
+Collect articles from ServiceNow knowledge base:
 
 ```bash
-python main.py
+python -m app.pipeline phase0
 ```
 
-The scraper will:
-1. Read credentials from `curl.txt`
-2. Load keywords from `config.py`
-3. For each keyword:
-   - Perform a search
-   - Crawl results up to the specified depth
-   - Extract links from dynamically loaded content
-   - Store articles and relationships in the database
-4. Display progress and statistics
+**What it does:**
+- Searches ServiceNow for configured keywords
+- Crawls articles and follows internal links up to specified depth
+- Extracts article content, metadata, and relationships
+- Stores everything in PostgreSQL (`articles` and `links` tables)
+- Supports resume/incremental crawling (skips already-crawled URLs)
 
-### Example Output
+**Options:**
+```bash
+# Crawl with default settings
+python -m app.pipeline phase0
 
+# The configuration in config.py controls all scraping behavior
 ```
+
+**Crawl Strategy:**
+
+The pipeline supports two crawl strategies (set via `CRAWL_STRATEGY` in config.py):
+
+- **BFS (Breadth-First Search)**: Crawls all articles at depth 0, then depth 1, then depth 2, etc.
+  - Best for: Getting a broad overview quickly
+  - Example: Search "Canvas" → crawl all Canvas articles → then their linked articles
+
+- **DFS (Depth-First Search)**: Follows each article's links deeply before moving to the next
+  - Best for: Exploring topic hierarchies and dependencies
+  - Example: Search "Canvas" → pick first article → follow its links recursively → then next article
+
+**Resumable Crawling:**
+
+Phase 0 automatically tracks which URLs have been crawled. If interrupted:
+- Already-crawled articles are skipped
+- Pending URLs remain in the queue
+- Simply re-run `python -m app.pipeline phase0` to resume
+
+**Output:**
+```
+Database Statistics:
+  Total articles:       1,247
+  Crawled articles:     1,247
+  Pending articles:     0
+  Total links:          3,891
+```
+
+### Phase 1: Enrich Articles
+
+Extract semantic metadata using LLM:
+
+```bash
+python -m app.pipeline phase1
+```
+
+Or limit to first N articles:
+
+```bash
+python -m app.pipeline phase1 --limit 100
+```
+
+This populates the `article_enrichment` table with:
+- Canonical topics
+- Keywords
+- User intent (learn, troubleshoot, setup)
+- Target audience
+- Prerequisites
+- Complexity level
+
+### Phase 2: Build Topic Graph
+
+Construct topic hierarchy and relationships:
+
+```bash
+python -m app.pipeline phase2
+```
+
+This populates:
+- `topics`: Normalized topics with article counts
+- `topic_articles`: Many-to-many topic-article links
+- `topic_relationships`: Topic hierarchy (parent, prerequisite, related)
+
+### Phase 3: Analyze Information Architecture
+
+Generate sidebar structure and detect issues:
+
+```bash
+python -m app.pipeline phase3
+```
+
+Or include LLM qualitative critique:
+
+```bash
+python -m app.pipeline phase3 --llm-critique
+```
+
+This generates:
+- `outputs/sidebar_structure.json`: Hierarchical sidebar organization
+- `outputs/ia_issues.json`: Detected organizational problems
+- `outputs/ia_review_report.md`: Human-readable analysis report
+
+### Run Full Pipeline
+
+Execute all phases sequentially:
+
+```bash
+python -m app.pipeline full
+```
+
+This runs Phase 0 → Phase 1 → Phase 2 → Phase 3 in order.
+
+### Check Status
+
+View current pipeline progress:
+
+```bash
+python -m app.pipeline status
+```
+
+Example output:
+```
+Pipeline Status
 ================================================================================
-  ServiceNow Knowledge Base Graph Scraper
-================================================================================
 
-Reading curl.txt for authentication credentials...
-✓ Successfully parsed authentication credentials
+Phase 0 (Scraping):
+  Total articles:       1,247
+  Crawled articles:     1,247
+  Pending articles:     0
+  Total links:          3,891
 
-Loaded 4 keyword(s) from config.py:
-  • 'canvas' (max depth: 2)
-  • 'email' (max depth: 1)
-  • 'vpn' (max depth: 2)
-  • 'duo' (max depth: 1)
+Phase 1 (Enrichment):
+  Enriched articles:    847
+  Remaining articles:   400
+  Progress:             68%
 
-Initializing components...
-✓ Selenium WebDriver initialized
-✓ Database connected successfully
-✓ All components initialized
+Phase 2 (Topic Graph):
+  Topics extracted:     127
+  Topic relationships:  342
 
-================================================================================
-Starting crawl for keyword: 'canvas' (max depth: 2)
-================================================================================
-
-Searching for: 'canvas'
---------------------------------------------------------------------------------
-✓ Found 45 articles
-Added 45 articles to crawl queue
-
-Starting crawl...
---------------------------------------------------------------------------------
-
-[1] Crawling article...
-  Fetching: https://servicenow.iu.edu/kb?id=kb_article_view&sysparm_article=KB0012345
-  Depth: 0
-  ✓ Saved article (ID: 1)
-    Title: Getting Started with Canvas
-    Links found: 8
-  ✓ Added 8 new articles to queue (depth 1)
-  Progress: 1 visited, 52 pending
-
-...
+Phase 3 (IA Analysis):
+  Last run:            2024-01-15 14:23:10
+  Output files exist:  ✓
 ```
 
 ## Database Schema
 
-### Articles Table
+### Core Tables (Phase 0)
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | SERIAL | Primary key |
-| url | TEXT | Article URL (unique) |
-| title | TEXT | Article title |
-| content | TEXT | Article content |
-| number | TEXT | Article number |
-| display_number | TEXT | Display number |
-| snippet | TEXT | Search snippet |
-| score | REAL | Search relevance score |
-| can_read | TEXT | Read permission |
-| depth | INTEGER | Crawl depth from search |
-| crawled_at | TIMESTAMP | First crawl time |
-| updated_at | TIMESTAMP | Last update time |
+**articles**: KB article metadata
+- `id`, `url`, `title`, `content`, `number`, `sys_kb_id`
+- `depth`, `crawled_at`, `updated_at`
 
-### Links Table
+**links**: Article relationships
+- `source_id`, `target_id`, `created_at`
 
-| Column | Type | Description |
-|--------|------|-------------|
-| source_id | INTEGER | Source article ID |
-| target_id | INTEGER | Target article ID |
-| created_at | TIMESTAMP | Link creation time |
+### Enrichment Tables (Phase 1)
+
+**article_enrichment**: LLM-extracted metadata
+- `article_id`, `canonical_topic`, `keywords[]`
+- `intent`, `audience`, `prerequisites[]`, `complexity`
+- `enriched_at`, `llm_model`
+
+### Topic Tables (Phase 2)
+
+**topics**: Normalized topic nodes
+- `id`, `name`, `normalized_name`
+- `total_articles`, `indegree`, `outdegree`, `prerequisite_count`
+- `intent_distribution`, `complexity_distribution`, `audience_distribution`
+
+**topic_articles**: Topic-article many-to-many
+- `topic_id`, `article_id`
+
+**topic_relationships**: Topic hierarchy
+- `source_topic_id`, `target_topic_id`, `relationship_type`
+- `weight`, `supporting_article_count`, `link_count`
+
+Relationship types:
+- `parent`: Hierarchical containment
+- `prerequisite`: Learning dependency
+- `related`: Semantic similarity
+
+## Pipeline Output Files
+
+### sidebar_structure.json
+
+Hierarchical sidebar structure with:
+- Category/subcategory organization
+- Article assignments
+- Depth nesting
+- Preview URLs
+
+```json
+{
+  "name": "Canvas",
+  "type": "category",
+  "children": [
+    {
+      "name": "Getting Started",
+      "type": "subcategory",
+      "articles": [...]
+    }
+  ]
+}
+```
+
+### ia_issues.json
+
+Detected organizational problems:
+- Orphaned articles (no topic assignment)
+- Isolated topics (no relationships)
+- Overloaded topics (too many articles)
+- Shallow topics (insufficient depth)
+- Missing prerequisites (dependency gaps)
+
+### ia_review_report.md
+
+Human-readable analysis with:
+- Sidebar structure preview
+- Issue summaries with severity
+- Article/topic statistics
+- Optional LLM qualitative critique
+
+## Example Workflow
+
+```bash
+# 1. Initial scrape
+python -m app.pipeline phase0
+
+# 2. Check how many articles we have
+python -m app.pipeline status
+
+# 3. Enrich first 100 articles
+python -m app.pipeline phase1 --limit 100
+
+# 4. Build topic graph
+python -m app.pipeline phase2
+
+# 5. Generate IA analysis with LLM critique
+python -m app.pipeline phase3 --llm-critique
+
+# 6. Review outputs
+cat outputs/ia_review_report.md
+```
 
 ## Configuration Options
 
-### `config.py` Settings
+### Pipeline Arguments
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `command` | `status`, `phase0`, `phase1`, `phase2`, `phase3`, `full` | - |
+| `--limit` | Limit articles in Phase 1 | None (all) |
+| `--ollama-url` | Ollama API endpoint | `http://localhost:11434` |
+| `--ollama-model` | LLM model name | `llama3.1:8b` |
+| `--output-dir` | Output directory | `./outputs/` |
+| `--llm-critique` | Include qualitative LLM analysis | False |
+
+### Config.py Settings
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `SERVICENOW_BASE_URL` | Your ServiceNow instance URL | - |
-| `DatabaseConfig` | PostgreSQL connection settings | - |
-| `REQUEST_DELAY` | Seconds between requests | 1.0 |
-| `REQUEST_TIMEOUT` | Request timeout in seconds | 30 |
-| `SELENIUM_HEADLESS` | Run browser in headless mode | True |
-| `SELENIUM_PAGE_LOAD_TIMEOUT` | Page load timeout | 30 |
-| `SELENIUM_WAIT_TIMEOUT` | Element wait timeout | 10 |
-| `SEARCH_KEYWORDS` | List of (keyword, max_depth) tuples | [] |
-| `MAX_ARTICLES_PER_KEYWORD` | Safety limit per keyword | 1000 |
+| `SERVICENOW_BASE_URL` | ServiceNow instance URL | - |
+| `DatabaseConfig` | PostgreSQL connection | - |
+| `SEARCH_KEYWORDS` | Phase 0 scraping keywords with depths | [] |
 | `CRAWL_STRATEGY` | "bfs" or "dfs" | "bfs" |
+| `MAX_ARTICLES_PER_KEYWORD` | Article limit per keyword | None |
+| `REQUEST_DELAY` | Scraper rate limit (seconds) | 1.0 |
 
 ## Troubleshooting
 
-### Selenium Issues
+### Phase 0 (Scraping)
 
-**Error: "geckodriver not found"**
-- Make sure geckodriver is installed and in your PATH
-- Try running `geckodriver --version` to verify
+**"Could not extract cookies/user token from cURL"**
+→ Make sure you copied the **complete** cURL command including all headers
+→ Check that `config/curl.txt` contains a valid cURL command
+→ Verify the command includes both Cookie and authentication headers
 
-**Error: "Firefox binary not found"**
-- Ensure Firefox is installed
-- On Linux, you may need to specify the Firefox binary path in `fetcher.py`
+**"No articles found or search failed"**
+→ Check your ServiceNow instance URL in `config/config.py`
+→ Verify your authentication in `config/curl.txt` is still valid (tokens may expire)
+→ Try searching manually on ServiceNow to confirm the keyword returns results
 
-### Database Issues
+**"Database connection failed"**
+→ Ensure PostgreSQL is running: `pg_isready`
+→ Verify credentials in `config/config.py`
+→ Check database exists: `psql -l | grep kb_graph`
 
-**Error: "Database connection failed"**
-- Verify PostgreSQL is running
-- Check your database credentials in `config.py`
-- Ensure the database exists: `createdb kb_graph`
+**Slow crawling**
+→ Adjust `REQUEST_DELAY` in config (default: 1.0 second between requests)
+→ Use shallower max_depth values in `SEARCH_KEYWORDS`
+→ Set `MAX_ARTICLES_PER_KEYWORD` to limit total articles
 
-### Authentication Issues
+### Phase 1 (Enrichment)
 
-**Error: "Could not extract cookies"**
-- Make sure you copied the complete cURL command
-- The command should include `-H 'Cookie: ...'` and `-H 'X-UserToken: ...'`
-- Try copying the cURL command again from a fresh browser session
+**"Cannot connect to Ollama"**
+→ Ensure Ollama is running: `ollama serve`
 
-### No Links Found
+**"Model not found"**
+→ Pull the model: `ollama pull llama3.1:8b`
 
-If the scraper is not finding any links:
-- Check that Selenium is properly initialized
-- Verify the page is fully loading (increase `SELENIUM_WAIT_TIMEOUT`)
-- Check the browser console for JavaScript errors
-- Try disabling headless mode temporarily (`SELENIUM_HEADLESS = False`)
+**Slow enrichment**
+→ Use smaller model (e.g., `llama3.1:8b` instead of `70b`)
+→ Use `--limit` to process in batches
+
+### Phase 2 (Topic Graph)
+
+**"No enriched articles found"**
+→ Run Phase 1 first
+
+**Few or no relationships**
+→ Ensure sufficient articles are enriched
+→ Check topic normalization isn't too aggressive
+
+### Phase 3 (IA Analysis)
+
+**Empty sidebar structure**
+→ Run Phase 2 first to generate topics
+
+**"Predetermined structure mode"**
+→ This is expected; custom category definitions are loaded from code
+
+## Database Queries
+
+### Check Phase 0 progress
+```sql
+SELECT
+  COUNT(*) as total,
+  COUNT(*) FILTER (WHERE crawled_at IS NOT NULL) as crawled,
+  COUNT(*) FILTER (WHERE crawled_at IS NULL) as pending
+FROM articles;
+```
+
+### Check enrichment progress
+```sql
+SELECT
+  COUNT(*) FILTER (WHERE ae.id IS NOT NULL) as enriched,
+  COUNT(*) FILTER (WHERE ae.id IS NULL) as unenriched
+FROM articles a
+LEFT JOIN article_enrichment ae ON a.id = ae.article_id;
+```
+
+### Top topics by article count
+```sql
+SELECT name, total_articles
+FROM topics
+ORDER BY total_articles DESC
+LIMIT 10;
+```
+
+### Find orphaned articles
+```sql
+SELECT a.title, a.url
+FROM articles a
+LEFT JOIN article_enrichment ae ON a.id = ae.article_id
+WHERE ae.id IS NULL;
+```
+
+### Article link network
+```sql
+SELECT
+  a1.title as source,
+  a2.title as target
+FROM links l
+JOIN articles a1 ON l.source_id = a1.id
+JOIN articles a2 ON l.target_id = a2.id
+LIMIT 100;
+```
+
+### Topic relationships
+```sql
+SELECT
+  t1.name as source,
+  t2.name as target,
+  tr.relationship_type,
+  tr.weight
+FROM topic_relationships tr
+JOIN topics t1 ON tr.source_topic_id = t1.id
+JOIN topics t2 ON tr.target_topic_id = t2.id
+ORDER BY tr.weight DESC;
+```
 
 ## How It Works
 
-### 1. Dynamic Content Rendering
+### Phase 0: Web Scraping
 
-The original scraper used `requests` to fetch HTML, but ServiceNow uses Angular to dynamically load article links. The updated scraper uses Selenium WebDriver to:
-- Load the full page in a real browser
-- Wait for Angular to render the content
-- Extract the fully rendered HTML with all dynamic elements
+1. **Authentication Setup**: Reads cookies/tokens from `config/curl.txt`
+2. **Keyword Search**: Queries ServiceNow API for each configured keyword
+3. **Frontier Initialization**: Adds search results to crawl queue with depth 0
+4. **Crawling Loop**:
+   - Fetches next URL from frontier (BFS or DFS strategy)
+   - Extracts article metadata and content
+   - Parses internal links from article
+   - Adds new links to frontier (if depth < max_depth)
+   - Saves article and links to database
+5. **Resume Support**: Tracks visited URLs to skip duplicates and enable resuming
 
-### 2. Depth-Limited Crawling
+### Phase 1: LLM Enrichment
 
-Each URL is assigned a depth level:
-- Search results start at depth 0
-- Articles linked from depth 0 are at depth 1
-- Articles linked from depth 1 are at depth 2
-- And so on...
+For each article, the pipeline:
+1. Constructs a prompt with title, snippet, and optional content excerpt
+2. Sends to Ollama for structured extraction
+3. Parses JSON response for metadata fields
+4. Validates and stores in `article_enrichment`
 
-The crawler stops following links when it reaches `max_depth` for each keyword, preventing unbounded crawling.
+### Phase 2: Topic Graph Construction
 
-### 3. Graph Storage
+1. **Topic Extraction**: Aggregates unique canonical topics from enrichment
+2. **Normalization**: Merges similar topics (e.g., "Canvas LMS" → "Canvas")
+3. **Relationship Inference**: Analyzes co-occurrence, prerequisites, and link patterns
+4. **Graph Metrics**: Computes indegree, outdegree, distributions
 
-Articles and their relationships are stored in PostgreSQL:
-- Each article is a node with metadata
-- Each link is an edge between two articles
-- This enables graph queries like "find all articles reachable from X"
+### Phase 3: IA Analysis
+
+1. **Predetermined Structure**: Loads custom category hierarchy from code
+2. **Article Assignment**: Maps articles to categories via topic matching
+3. **Issue Detection**: Identifies orphans, overloads, shallow hierarchies
+4. **Report Generation**: Produces JSON and Markdown outputs
+5. **Optional LLM Critique**: Qualitative analysis of structure
 
 ## Future Enhancements
 
-Possible improvements:
-- Resume interrupted crawls
-- Parallel crawling with multiple workers
-- Export graph to visualization tools (Gephi, Neo4j)
-- Full-text search on article content
-- Incremental updates (re-crawl only changed articles)
+- **Incremental updates**: Re-scrape only changed articles (Phase 0)
+- **Parallel crawling**: Multi-threaded article fetching (Phase 0)
+- **Graph visualization**: Export to Neo4j, Gephi, or D3.js
+- **Search integration**: Full-text search across enriched metadata
+- **A/B testing**: Compare different category structures
+- **User feedback loop**: Incorporate actual usage patterns
 
 ## License
 

@@ -25,7 +25,7 @@ class TopicGraphBuilder:
 
     def __init__(self, db: EnrichedGraphDB, min_articles: int = 2):
         """
-        Initialize improved topic graph builder
+        Initialize topic graph builder
 
         Args:
             db: Database instance
@@ -252,7 +252,7 @@ class TopicGraphBuilder:
 
         # Step 1: Find subtopic relationships (improved)
         if verbose:
-            print("\nFinding subtopic relationships (improved algorithm)...")
+            print("\nFinding subtopic relationships (algorithm)...")
 
         subtopic_rels = self._find_subtopic_relationships()
         relationships.extend(subtopic_rels)
@@ -272,7 +272,7 @@ class TopicGraphBuilder:
 
         # Step 3: Find related topics (improved)
         if verbose:
-            print("\nFinding related topics (improved criteria)...")
+            print("\nFinding related topics (criteria)...")
 
         related_rels = self._find_related_topics()
         relationships.extend(related_rels)
@@ -328,7 +328,7 @@ class TopicGraphBuilder:
 
     def _find_subtopic_relationships(self) -> List['TopicRelationship']:
         """
-        Improved subtopic detection using multiple strategies
+        subtopic detection using multiple strategies
 
         Strategies:
         1. Word containment (original)
@@ -376,7 +376,7 @@ class TopicGraphBuilder:
 
     def _find_prerequisite_relationships(self) -> List['TopicRelationship']:
         """
-        Improved prerequisite detection with LOWER threshold
+        prerequisite detection with LOWER threshold
 
         Changes:
         - Reduced minimum mentions from 2 to 1
@@ -434,7 +434,7 @@ class TopicGraphBuilder:
 
     def _find_related_topics(self) -> List['TopicRelationship']:
         """
-        Improved related topic detection
+        related topic detection
 
         Strategies:
         1. Link patterns (direct article links between topics)
