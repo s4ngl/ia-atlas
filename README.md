@@ -1,4 +1,4 @@
-# Indiana University UTIS Information Architecture Generation Pipeline
+# IA-ATLAS: Information Architecture Generation Pipeline for Indiana University UITS Department
 
 A multi-phase pipeline that scrapes the IU ServiceNow knowledge base articles, enriches them with semantic metadata using LLMs, builds topic graphs, and analyzes information architecture to propose a streamlined organizational structure for UITS' (University Information Technology Service) HPC training website.
 
