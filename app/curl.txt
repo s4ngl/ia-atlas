@@ -1,0 +1,20 @@
+curl 'https://servicenow.iu.edu/api/now/sp/rectangle/350093d33bdd6a10bae1500864e45add?id=iu_kb_search&query=slate&spa=1' \
+  --compressed \
+  -X POST \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:148.0) Gecko/20100101 Firefox/148.0' \
+  -H 'Accept: application/json' \
+  -H 'Accept-Language: en-US,en;q=0.9' \
+  -H 'Accept-Encoding: gzip, deflate, br, zstd' \
+  -H 'Content-Type: application/json;charset=utf-8' \
+  -H 'Referer: https://servicenow.iu.edu/kb?id=iu_kb_search&query=slate&spa=1' \
+  -H 'x-portal: bb4b42871b290e106ef441d8cd4bcbdb' \
+  -H 'X-UserToken: 42baa2914776f610d500b87b716d43d655708076e0ee5169676347edf1eebcfc8269cbf7' \
+  -H 'X-Transaction-Source: Interface=Web,Interface-Name=KB,Interface-Type=Service Portal,Interface-SysID=bb4b42871b290e106ef441d8cd4bcbdb' \
+  -H 'X-Use-Polaris: false' \
+  -H 'Origin: https://servicenow.iu.edu' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'Connection: keep-alive' \
+  -H 'Cookie: glide_user_route=glide.4d98922c0e032b70f51c531534ef2fa8; glide_sso_id=ae2df56b1bd868108b3999fabc4bcb16; intercom-device-id-g60t55rg=3f9ac0c8-7e84-402b-a63a-8dc9f604c281; PS_DEVICEFEATURES=width:2432 height:1368 pixelratio:1.5789473684210527 touch:0 geolocation:1 websockets:1 webworkers:1 datepicker:1 dtpicker:1 timepicker:1 dnd:1 sessionstorage:1 localstorage:1 history:1 canvas:1 svg:1 postmessage:1 hc:0 maf:0; BIGipServerpool_iu=b3bf2ee4a3a03c37fe75e1451b189735; JSESSIONID=C65DF69436B88E5E604C3DEA83DD414A; glide_node_id_for_js=ed448859924af976d2b8eaa7f5b2f8bc330f295c29c149ba48ae9675dece9d73; glide_user_activity=U0N2M18xOkFLblBWbmFlM2hKZFBJanVQbjdRejd1ME4yYWNBeFkrcjVQVUNaNmZra0E9OkF5ZjJnRWdOeUxxMHVSVk5rUDdiQTZvZWErMmRaVW5Dd1d5TmZXaVVTemc9; UX-Token=%7B%22signature%22%3A%22MEUCIBYvOrf8LtxNSxMCvnYJQxyyf3cat98kjEJiGTQHheE2AiEA9GY7ikcO_lPoimkTGMlyT3S_8Hv2pVgC9ZUY3GycqN4%3D%22%2C%22token%22%3A%22eyJhbGciOiJub25lIn0.eyJpbnN0YW5jZUlkIjoiMzdiODdkYWJkYjZkMGMxMDUyY2VjNTk3MDU5NjE5M2MiLCJleHBpcnkiOjE3Njk5Nzg1NzMxMjMsImluc3RhbmNlTmFtZSI6Iml1IiwidXNlcklkIjoiOGI0ZjU2NTkxMzk1MzdmOWNhNDk2MTYwNGM1NmM2NjNlY2JlYjFkYmM2OWE3NDU3ZjNiYTQ0ZTNmODEzYmU2ZiJ9.%22%7D; VALK_SESSION_ID=12841F9F05611DE1DDCFF43449D16679; dtCookie=v_4_srv_2_sn_0821BDD01BF1DE089A5D37B26BB7E429_perc_100000_ol_0_mul_1_app-3Aea7c4b59f27d43eb_1; glide_session_store=02BAA2914776F610D500B87B716D43D6; BAYEUX_BROWSER=rcr8bjk2jtt21rix' \
+  --data-raw '{"payload":"{\"keyword\":\"slate\",\"language\":\"\",\"variables\":{},\"resource\":\"\",\"kb_query\":\"\",\"social_query\":\"\",\"category_as_tree\":false,\"order\":\"relevancy,false\",\"start\":0,\"end\":100,\"attachment\":true,\"portal_suffix\":\"kb\",\"knowledge_fields\":[\"can_read_user_criteria\",\"number\",\"sys_updated_on\",\"display_number\"],\"social_fields\":[\"sys_updated_on\",\"sys_created_on\",\"votes\",\"answer_count\"]}","timeout":{},"sessionRotationTrigger":false}'

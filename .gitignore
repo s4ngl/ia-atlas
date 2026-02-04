@@ -1,13 +1,3 @@
-analysis/
-app/
-config/
-core/
-data/
-ingestion/
-llm/
-persistence/
-scripts/
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
