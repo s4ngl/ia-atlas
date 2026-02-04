@@ -1,0 +1,92 @@
+❯ tree
+.
+├── __pycache__
+│   └── config.cpython-312.pyc
+├── analysis
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   └── __init__.cpython-312.pyc
+│   ├── enrichment
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   └── article_enricher.cpython-312.pyc
+│   │   └── article_enricher.py
+│   └── topics
+│       ├── __init__.py
+│       ├── __pycache__
+│       │   ├── __init__.cpython-312.pyc
+│       │   ├── aggressive_normalizer.cpython-312.pyc
+│       │   ├── normalizer.cpython-312.pyc
+│       │   └── topic_graph.cpython-312.pyc
+│       ├── normalizer.py
+│       └── topic_graph.py
+├── app
+│   ├── __pycache__
+│   │   ├── pipeline.cpython-312.pyc
+│   │   └── pipeline.cpython-313.pyc
+│   ├── curl.txt
+│   ├── main.py
+│   └── pipeline.py
+├── config
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── __init__.cpython-313.pyc
+│   │   ├── config.cpython-312.pyc
+│   │   └── config.cpython-313.pyc
+│   └── config.py
+├── core
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   └── models.cpython-312.pyc
+│   └── models.py
+├── data
+│   ├── logs
+│   │   └── scraper.log
+│   └── seeds.txt
+├── DESIGN-DOC.md
+├── ingestion
+│   └── scraper
+│       ├── __init__.py
+│       ├── __pycache__
+│       │   ├── __init__.cpython-312.pyc
+│       │   ├── __init__.cpython-313.pyc
+│       │   ├── fetcher.cpython-312.pyc
+│       │   ├── fetcher.cpython-313.pyc
+│       │   ├── frontier.cpython-312.pyc
+│       │   └── parser.cpython-312.pyc
+│       ├── fetcher.py
+│       ├── frontier.py
+│       ├── parser.py
+│       └── scraper
+├── llm
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── ollama_client.cpython-312.pyc
+│   │   └── prompts.cpython-312.pyc
+│   ├── ollama_client.py
+│   └── prompts.py
+├── persistence
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── __init__.cpython-313.pyc
+│   │   ├── database.cpython-312.pyc
+│   │   ├── phase0_database.cpython-312.pyc
+│   │   └── phase0_database.cpython-313.pyc
+│   ├── database.py
+│   └── phase0_database.py
+├── QUICKSTART.md
+├── README.md
+├── requirements.txt
+├── schemas.txt
+├── scripts
+│   ├── deduplicate_by_title.sql
+│   └── deduplicate_database.sql
+├── tests
+│   ├── test-auth.py
+│   └── test-selenium.py
+└── tree.txt

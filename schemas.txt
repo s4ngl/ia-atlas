@@ -1,0 +1,139 @@
+                  List of relations
+ Schema |        Name         | Type  |    Owner
+--------+---------------------+-------+--------------
+ public | article_enrichment  | table | skaii.flakes
+ public | articles            | table | skaii.flakes
+ public | articles_backup     | table | skaii.flakes
+ public | links               | table | skaii.flakes
+ public | links_backup        | table | skaii.flakes
+ public | topic_articles      | table | skaii.flakes
+ public | topic_relationships | table | skaii.flakes
+ public | topics              | table | skaii.flakes
+(8 rows)
+
+                                                                     Table "public.articles"
+     Column     |            Type             | Collation | Nullable |               Default                | Storage  | Compression | Stats target | Description
+----------------+-----------------------------+-----------+----------+--------------------------------------+----------+-------------+--------------+-------------
+ id             | integer                     |           | not null | nextval('articles_id_seq'::regclass) | plain    |             |              |
+ url            | text                        |           | not null |                                      | extended |             |              |
+ title          | text                        |           |          |                                      | extended |             |              |
+ content        | text                        |           |          |                                      | extended |             |              |
+ number         | text                        |           |          |                                      | extended |             |              |
+ display_number | text                        |           |          |                                      | extended |             |              |
+ snippet        | text                        |           |          |                                      | extended |             |              |
+ score          | real                        |           |          |                                      | plain    |             |              |
+ can_read       | text                        |           |          |                                      | extended |             |              |
+ crawled_at     | timestamp without time zone |           |          | now()                                | plain    |             |              |
+ updated_at     | timestamp without time zone |           |          | now()                                | plain    |             |              |
+ depth          | integer                     |           |          | 0                                    | plain    |             |              |
+ sys_kb_id      | text                        |           |          |                                      | extended |             |              |
+Indexes:
+    "articles_pkey" PRIMARY KEY, btree (id)
+    "articles_url_key" UNIQUE CONSTRAINT, btree (url)
+    "idx_articles_sys_kb_id" btree (sys_kb_id)
+    "idx_articles_url" btree (url)
+    "unique_sys_kb_id" UNIQUE CONSTRAINT, btree (sys_kb_id)
+Referenced by:
+    TABLE "article_enrichment" CONSTRAINT "article_enrichment_article_id_fkey" FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+    TABLE "links" CONSTRAINT "links_source_id_fkey" FOREIGN KEY (source_id) REFERENCES articles(id) ON DELETE CASCADE
+    TABLE "links" CONSTRAINT "links_target_id_fkey" FOREIGN KEY (target_id) REFERENCES articles(id) ON DELETE CASCADE
+    TABLE "topic_articles" CONSTRAINT "topic_articles_article_id_fkey" FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+Access method: heap
+
+                                                      Table "public.links"
+   Column   |            Type             | Collation | Nullable | Default | Storage | Compression | Stats target | Description
+------------+-----------------------------+-----------+----------+---------+---------+-------------+--------------+-------------
+ source_id  | integer                     |           | not null |         | plain   |             |              |
+ target_id  | integer                     |           | not null |         | plain   |             |              |
+ created_at | timestamp without time zone |           |          | now()   | plain   |             |              |
+Indexes:
+    "links_pkey" PRIMARY KEY, btree (source_id, target_id)
+    "idx_links_source" btree (source_id)
+    "idx_links_target" btree (target_id)
+Foreign-key constraints:
+    "links_source_id_fkey" FOREIGN KEY (source_id) REFERENCES articles(id) ON DELETE CASCADE
+    "links_target_id_fkey" FOREIGN KEY (target_id) REFERENCES articles(id) ON DELETE CASCADE
+Access method: heap
+
+                                                                      Table "public.article_enrichment"
+     Column      |            Type             | Collation | Nullable |                    Default                     | Storage  | Compression | Stats target | Description
+-----------------+-----------------------------+-----------+----------+------------------------------------------------+----------+-------------+--------------+-------------
+ id              | integer                     |           | not null | nextval('article_enrichment_id_seq'::regclass) | plain    |             |              |
+ article_id      | integer                     |           |          |                                                | plain    |             |              |
+ canonical_topic | text                        |           | not null |                                                | extended |             |              |
+ keywords        | text[]                      |           |          |                                                | extended |             |              |
+ intent          | text                        |           |          |                                                | extended |             |              |
+ audience        | text                        |           |          |                                                | extended |             |              |
+ prerequisites   | text[]                      |           |          |                                                | extended |             |              |
+ complexity      | text                        |           |          |                                                | extended |             |              |
+ enriched_at     | timestamp without time zone |           |          | now()                                          | plain    |             |              |
+ llm_model       | text                        |           |          |                                                | extended |             |              |
+Indexes:
+    "article_enrichment_pkey" PRIMARY KEY, btree (id)
+    "article_enrichment_article_id_key" UNIQUE CONSTRAINT, btree (article_id)
+    "idx_enrichment_article" btree (article_id)
+    "idx_enrichment_topic" btree (canonical_topic)
+Foreign-key constraints:
+    "article_enrichment_article_id_fkey" FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+Access method: heap
+
+                                       Table "public.topic_articles"
+   Column   |  Type   | Collation | Nullable | Default | Storage | Compression | Stats target | Description
+------------+---------+-----------+----------+---------+---------+-------------+--------------+-------------
+ topic_id   | integer |           | not null |         | plain   |             |              |
+ article_id | integer |           | not null |         | plain   |             |              |
+Indexes:
+    "topic_articles_pkey" PRIMARY KEY, btree (topic_id, article_id)
+    "idx_topic_articles_article" btree (article_id)
+    "idx_topic_articles_topic" btree (topic_id)
+Foreign-key constraints:
+    "topic_articles_article_id_fkey" FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+    "topic_articles_topic_id_fkey" FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
+Access method: heap
+
+                                                                          Table "public.topic_relationships"
+          Column          |            Type             | Collation | Nullable |                     Default                     | Storage  | Compression | Stats target | Description
+--------------------------+-----------------------------+-----------+----------+-------------------------------------------------+----------+-------------+--------------+-------------
+ id                       | integer                     |           | not null | nextval('topic_relationships_id_seq'::regclass) | plain    |             |              |
+ source_topic_id          | integer                     |           |          |                                                 | plain    |             |              |
+ target_topic_id          | integer                     |           |          |                                                 | plain    |             |              |
+ relationship_type        | text                        |           | not null |                                                 | extended |             |              |
+ weight                   | real                        |           |          | 1.0                                             | plain    |             |              |
+ supporting_article_count | integer                     |           |          | 0                                               | plain    |             |              |
+ link_count               | integer                     |           |          | 0                                               | plain    |             |              |
+ created_at               | timestamp without time zone |           |          | now()                                           | plain    |             |              |
+Indexes:
+    "topic_relationships_pkey" PRIMARY KEY, btree (id)
+    "idx_topic_rel_source" btree (source_topic_id)
+    "idx_topic_rel_target" btree (target_topic_id)
+    "topic_relationships_source_topic_id_target_topic_id_relatio_key" UNIQUE CONSTRAINT, btree (source_topic_id, target_topic_id, relationship_type)
+Foreign-key constraints:
+    "topic_relationships_source_topic_id_fkey" FOREIGN KEY (source_topic_id) REFERENCES topics(id) ON DELETE CASCADE
+    "topic_relationships_target_topic_id_fkey" FOREIGN KEY (target_topic_id) REFERENCES topics(id) ON DELETE CASCADE
+Access method: heap
+
+                                                                          Table "public.topics"
+         Column          |            Type             | Collation | Nullable |              Default               | Storage  | Compression | Stats target | Description
+-------------------------+-----------------------------+-----------+----------+------------------------------------+----------+-------------+--------------+-------------
+ id                      | integer                     |           | not null | nextval('topics_id_seq'::regclass) | plain    |             |              |
+ name                    | text                        |           | not null |                                    | extended |             |              |
+ normalized_name         | text                        |           | not null |                                    | extended |             |              |
+ total_articles          | integer                     |           |          | 0                                  | plain    |             |              |
+ indegree                | integer                     |           |          | 0                                  | plain    |             |              |
+ outdegree               | integer                     |           |          | 0                                  | plain    |             |              |
+ prerequisite_count      | integer                     |           |          | 0                                  | plain    |             |              |
+ intent_distribution     | jsonb                       |           |          |                                    | extended |             |              |
+ complexity_distribution | jsonb                       |           |          |                                    | extended |             |              |
+ audience_distribution   | jsonb                       |           |          |                                    | extended |             |              |
+ created_at              | timestamp without time zone |           |          | now()                              | plain    |             |              |
+ updated_at              | timestamp without time zone |           |          | now()                              | plain    |             |              |
+Indexes:
+    "topics_pkey" PRIMARY KEY, btree (id)
+    "idx_topics_normalized" btree (normalized_name)
+    "topics_normalized_name_key" UNIQUE CONSTRAINT, btree (normalized_name)
+Referenced by:
+    TABLE "topic_articles" CONSTRAINT "topic_articles_topic_id_fkey" FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
+    TABLE "topic_relationships" CONSTRAINT "topic_relationships_source_topic_id_fkey" FOREIGN KEY (source_topic_id) REFERENCES topics(id) ON DELETE CASCADE
+    TABLE "topic_relationships" CONSTRAINT "topic_relationships_target_topic_id_fkey" FOREIGN KEY (target_topic_id) REFERENCES topics(id) ON DELETE CASCADE
+Access method: heap
+
